@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace = "com.dormitory.mapper.DormitoryMapper">
+
+    <!-- ====================1. MAIN ============================-->
+    <!-- 2. 추천(별점) -->
+    <select id="getDormitoryByStar" resultType="com.dormitory.dto.DormitoryDTO">
+        select * from tbl_dormitory where d_star &gt;= 9 order by rand(dayofyear(curdate()));
+    </select>
+
+    <!-- 3. 특가 할인 숙소 -->
+    <select id="getDormitoryByDiscount" resultType="com.dormitory.dto.DormitoryDTO">
+        select * from (
+            select
+                *,
+                (select max(r_price) from tbl_room_type where tbl_room_type.d_code = tbl_dormitory.d_code) * (d_discount / 100) as calculated_price,
+                (select min(r_price) from tbl_room_type where tbl_room_type.d_code = tbl_dormitory.d_code) as min_r_price
+            from tbl_dormitory
+        ) as tmp_tbl
+        where calculated_price &gt;= 20000
+        order by rand(dayofyear(curdate()))
+    </select>
+
+
+    <!-- 5.(test) 추천(얼리체크인) -->
+    <select id="getEarlyCheckin" resultType="com.dormitory.dto.DormitoryDTO">
+        select *,
+            (select min(r_price) from tbl_room_type where tbl_room_type.d_code = tbl_dormitory.d_code) as min_r_price
+        from tbl_dormitory where d_earlycheckin = 'Y' order by rand(dayofyear(curdate()))
+    </select>
+
+    <!-- 6.(test) 추천(등급 높은 순) -->
+    <select id="getDormitoryByGrade" resultType="com.dormitory.dto.DormitoryDTO">
+        select * from tbl_dormitory order by d_grade desc limit 10
+    </select>
+
+    <!-- 7.(test) 추천(타압별) -->
+    <select id="getDormitoryByType" parameterType="String" resultType="com.dormitory.dto.DormitoryDTO">
+        select * from tbl_dormitory where d_type=#{type} limit 10
+    </select>
+    <!-- =====================4 RoomInfo ========================== -->
+    <!-- 1. 숙소-->
+    <select id="getRoomReviewInfo" parameterType="String" resultType="com.dormitory.dto.DormitoryRoomDTO">
+        SELECT d.*, r.*
+        FROM tbl_dormitory d
+                 JOIN tbl_room_type r ON d.d_code = r.d_code
+        WHERE d.d_code = #{d_code}
+    </select>
+    <!-- 2. 숙소별 리뷰 정보-->
+    <select id="getReview" parameterType="String" resultType="com.dormitory.dto.ReviewDTO">
+        select * from tbl_review where d_code=#{d_code}
+    </select>
+    <!-- 3. 지도 위도/경도-->
+    <select id="getMap" parameterType="HashMap" resultType="com.dormitory.dto.DormitoryDTO">
+        select d_lat, d_lon, d_name, d_star from tbl_dormitory WHERE d_lat BETWEEN #{swLat} AND #{neLat} AND d_lon BETWEEN #{swLng} AND #{neLng};
+    </select>
+
+
+    <!-- 4. 숙소별 객실 정보 -->
+
+    <select id="getR_Code" parameterType="com.dormitory.dto.RoomTypeDTO" resultType="com.dormitory.dto.RoomTypeDTO">
+        select * from tbl_room_type where d_code=#{d_code}
+    </select>
+
+    <select id="getUrl" parameterType="com.dormitory.dto.RoomTypeDTO" resultType="String">
+        select r_url from tbl_url where r_code=#{r_code}
+    </select>
+    <select id="getReservationInfoByR_Code" parameterType="String" resultType="com.dormitory.dto.ReservationDTO">
+        select * from tbl_reservation where r_code=#{r_code}
+    </select>
+    <select id="getVacancy" parameterType="com.dormitory.dto.RoomTypeDTO" resultType="int">
+        select count(*) from tbl_room where r_code=#{r_code}
+    </select>
+
+
+    <select id="getRoomCount" parameterType="String" resultType="int">
+        SELECT COUNT(*) FROM tbl_room WHERE r_code=#{r_code}
+    </select>
+
+    <!-- 5. 숙소 정보 -->
+    <select id="getDormitory" parameterType="String" resultType="com.dormitory.dto.DormitoryDTO">
+        select * from tbl_dormitory where d_code=#{d_code}
+    </select>
+    <!-- 6. 숙소별 어메니티 정보 -->
+    <select id="getAmenity" parameterType="String" resultType="com.dormitory.dto.AmenityDTO">
+        select * from tbl_amenity where d_code=#{d_code}
+    </select>
+
+    <!-- 7.환불 규정-->
+    <select id="getCancelPolicy" parameterType="com.dormitory.dto.CancelDTO" resultType="com.dormitory.dto.CancelDTO">
+        select * from tbl_cancel where d_code=#{d_code}
+    </select>
+
+
+
+    <!-- =====================5. SearchList ====================== -->
+
+<select id="getDormitoryList" parameterType="HashMap" resultType="com.dormitory.dto.DormitoryDTO">
+    SELECT
+        *,
+        (SELECT MAX(r_price) FROM tbl_room_type WHERE tbl_room_type.d_code = tbl_dormitory.d_code) AS max_r_price,
+        (SELECT MIN(r_price) FROM tbl_room_type WHERE tbl_room_type.d_code = tbl_dormitory.d_code) AS min_r_price
+    FROM tbl_dormitory
+    WHERE (d_name LIKE CONCAT('%', #{keyword}, '%') OR d_road LIKE CONCAT('%', #{keyword}, '%') OR d_type LIKE CONCAT('%', #{keyword}, '%'))
+    <if test="typeList != null and typeList.size() > 0 and !typeList.contains('All')">
+        AND d_type IN
+        <foreach item="item" index="index" collection="typeList" open="(" separator="," close=")">
+            #{item}
+        </foreach>
+    </if>
+    AND d_star BETWEEN #{minStar} AND #{maxStar}
+    ORDER BY RAND()
+    LIMIT #{pageNum}, 10
+</select>
+
+
+
+</mapper>

@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dormitory-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dormitory 
+  template:
+    metadata:
+      name: dormitory 
+      labels:
+        app: dormitory 
+    spec:
+      containers:
+      - name: dormitory 
+        image: docker.io/jingom368/dormitory_dormitory:{{VERSION}}
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+      imagePullSecrets:
+      - name: miniboard-secret
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dormitory-service
+spec:
+  ports:
+  - port: 8080
+    targetPort: 8080
+  selector:
+    app: dormitory 
+  type: ClusterIP
